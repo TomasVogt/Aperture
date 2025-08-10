@@ -3,102 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador de Rutas de Aprendizaje</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f0f2f5;
-            color: #1c1e21;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-        }
-        .container {
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 8px 16px rgba(0, 0, 0, 0.1);
-            max-width: 800px;
-            width: 90%;
-            padding: 24px;
-            box-sizing: border-box;
-        }
-        h1 { font-size: 24px; color: #0056b3; }
-        input {
-            width: 100%;
-            padding: 14px;
-            font-size: 16px;
-            border: 1px solid #dddfe2;
-            border-radius: 6px;
-            box-sizing: border-box;
-        }
-        button {
-            width: 100%;
-            padding: 14px;
-            font-size: 18px;
-            font-weight: bold;
-            margin-top: 16px;
-            cursor: pointer;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            transition: background-color 0.3s;
-        }
-        button:hover { background-color: #0056b3; }
-        button:disabled { background-color: #99caff; cursor: not-allowed; }
-        #resultado { margin-top: 24px; border-top: 1px solid #dddfe2; padding-top: 24px; }
-        .fase { margin-bottom: 24px; }
-        .fase h3 { border-bottom: 2px solid #007bff; padding-bottom: 8px; }
-        .paso { border-left: 3px solid #007bff; padding-left: 15px; margin-bottom: 15px; background-color: #f9f9f9; padding: 10px; border-radius: 5px; }
-        #loader { display: none; text-align: center; padding: 20px; font-weight: bold; }
-        .error { color: #d93025; font-weight: bold; text-align: center; }
-    </style>
+    <title>G.R.A. // Generador de Rutas de Aprendizaje</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <h1>Generador de Rutas de Aprendizaje con IA</h1>
-        <p>Dime qué te gustaría aprender y crearé un plan de estudios para ti.</p>
+        <h1>Aperture Project</h1>
+        <p>Inicia tu misión. Define tu objetivo y el nivel de tu equipo. Crearé un protocolo de aprendizaje para ti.</p>
 
-        <input type="text" id="userInput" placeholder="Ej: desarrollo backend con Go">
-        <button id="generateBtn" onclick="generarRuta()">Generar Mi Ruta</button>
+        <div class="input-group">
+            <label for="userInput">Objetivo de aprendizaje:</label>
+            <input type="text" id="userInput" placeholder="Ej: desarrollo backend con Go">
+        </div>
 
-        <div id="loader">Cargando...</div>
+        <div class="input-group">
+            <label for="level">Tu nivel de conocimiento previo:</label>
+            <select id="level">
+                <option value="Principiante">Principiante (Poco o nada de conocimiento)</option>
+                <option value="Intermedio">Intermedio (Conozco los fundamentos)</option>
+                <option value="Avanzado">Avanzado (Busco temas complejos y especialización)</option>
+            </select>
+        </div>
+
+        <button id="generateBtn" onclick="generarRuta()">[ Generar Ruta ]</button>
+
+        <div id="loader">PROCESANDO TRANSMISIÓN...</div>
         <div id="resultado"></div>
     </div>
 
     <script>
         async function generarRuta() {
             const userInput = document.getElementById('userInput');
+            const levelSelect = document.getElementById('level');
             const resultadoDiv = document.getElementById('resultado');
             const loader = document.getElementById('loader');
             const generateBtn = document.getElementById('generateBtn');
 
             if (!userInput.value) {
-                alert("Por favor, escribe lo que quieres aprender.");
+                alert("Por favor, define un objetivo para continuar la misión.");
                 return;
             }
 
             // --- UX Mejorada: Deshabilitar botón y mostrar loader ---
             generateBtn.disabled = true;
-            generateBtn.textContent = 'Generando...';
+            generateBtn.innerHTML = 'Generando...';
             loader.style.display = 'block';
             resultadoDiv.innerHTML = '';
 
             try {
+                // --- MODIFICACIÓN: Enviamos 'goal' y 'level' ---
                 const response = await fetch('http://127.0.0.1:5000/generate-path', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ goal: userInput.value })
+                    body: JSON.stringify({ 
+                        goal: userInput.value,
+                        level: levelSelect.value 
+                    })
                 });
 
                 const data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(data.error || 'Ocurrió un error desconocido');
+                    throw new Error(data.error || 'Ocurrió un error desconocido en la transmisión');
                 }
-
+                
+                // El resto del código de renderizado es similar, pero lo adaptamos a la nueva estructura
                 let html = `<h2>${data.titulo_ruta}</h2>`;
                 data.fases.forEach(fase => {
                     html += `<div class="fase"><h3>${fase.nombre_fase}</h3>`;
@@ -107,7 +76,7 @@
                             <div class="paso">
                                 <h4>${paso.titulo}</h4>
                                 <p>${paso.descripcion}</p>
-                                <a href="${paso.recurso_util}" target="_blank" rel="noopener noreferrer">Ver recurso</a>
+                                <a href="${paso.recurso_util}" target="_blank" rel="noopener noreferrer">Acceder al recurso >></a>
                             </div>
                         `;
                     });
@@ -116,12 +85,12 @@
                 resultadoDiv.innerHTML = html;
 
             } catch (error) {
-                resultadoDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+                resultadoDiv.innerHTML = `<p class="error">ERROR EN LA CONEXIÓN: ${error.message}</p>`;
             } finally {
                 // --- UX Mejorada: Habilitar botón y ocultar loader ---
                 loader.style.display = 'none';
                 generateBtn.disabled = false;
-                generateBtn.textContent = 'Generar Mi Ruta';
+                generateBtn.innerHTML = '[ Generar Ruta ]';
             }
         }
     </script>
