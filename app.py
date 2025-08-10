@@ -1,18 +1,15 @@
-# Archivo: app.py (Corregido para servir archivos estáticos)
+# Archivo: app.py (Versión Híbrida de Alta Calidad)
 
 import os
 import json
 import google.generativeai as genai
-# --- IMPORTANTE: Añade send_from_directory ---
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from dotenv import load_dotenv
 
-# --- Configuración Inicial ---
 app = Flask(__name__)
 CORS(app) 
 
-# --- Carga de la Clave de API desde el archivo .env ---
 load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
 
@@ -21,58 +18,27 @@ if not api_key:
 
 genai.configure(api_key=api_key)
 
-# --- NUEVA RUTA: Para servir el index.html ---
 @app.route('/')
-def serve_index():
-    # Busca 'index.html' dentro de la carpeta 'static' y lo devuelve
-    return send_from_directory('static', 'index.html')
+def index():
+    return render_template('index.html')
 
-# --- El Prompt Maestro (sin cambios) ---
-def crear_prompt(objetivo_usuario, nivel_conocimiento):
-    return f"""
-    Eres un 'Creador de Rutas de Aprendizaje Experto'. Tu misión es generar un plan de estudios detallado y personalizado.
-    
-    El objetivo del usuario es: '{objetivo_usuario}'
-    
-    IMPORTANTE: El nivel de conocimiento previo del usuario es '{nivel_conocimiento}'. Debes adaptar la ruta a este nivel:
-    - Si es 'Principiante', empieza con los conceptos más fundamentales y básicos, asumiendo cero conocimiento previo.
-    - Si es 'Intermedio', puedes omitir los fundamentos más obvios y empezar con temas más prácticos y de nivel medio.
-    - Si es 'Avanzado', enfócate en temas complejos, especialización, mejores prácticas y herramientas de nivel profesional. Omite por completo los temas básicos e intermedios.
-
-    Tu respuesta DEBE seguir estrictamente el siguiente formato JSON. No incluyas texto antes o después del JSON:
-    {{
-      "titulo_ruta": "Ruta de Aprendizaje para: {objetivo_usuario} (Nivel: {nivel_conocimiento})",
-      "fases": [
-        {{
-          "nombre_fase": "Nombre de la Fase 1 (ej: Fundamentos Indispensables)",
-          "pasos": [
-            {{
-              "titulo": "Título específico de la habilidad a aprender",
-              "descripcion": "Una descripción corta y clara de lo que el usuario debe aprender en este paso, adaptada a su nivel.",
-              "recurso_util": "https://ejemplo.com/recurso-util-y-valido"
-            }}
-          ]
-        }}
-      ]
-    }}
-    Asegúrate de que cada 'recurso_util' sea una URL real y de alta calidad. Genera entre 2 y 4 fases, cada una con varios pasos lógicos y relevantes para el nivel del usuario.
-    """
-
-# --- La Ruta de la API (sin cambios) ---
 @app.route('/generate-path', methods=['POST'])
 def generar_ruta():
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({"error": "Petición inválida."}), 400
+
         objetivo = data.get('goal')
         nivel = data.get('level')
 
         if not objetivo or not nivel:
-            return jsonify({"error": "Tanto el objetivo ('goal') como el nivel ('level') son requeridos."}), 400
+            return jsonify({"error": "El objetivo y el nivel son requeridos."}), 400
 
         model = genai.GenerativeModel('gemini-1.5-flash-latest')
-        
         prompt_completo = crear_prompt(objetivo, nivel)
-        response = model.generate_content(prompt_completo)
+        # Aumentamos el tiempo de espera, ya que la petición es más compleja
+        response = model.generate_content(prompt_completo, request_options={"timeout": 120})
         
         respuesta_texto = response.text.strip()
         if respuesta_texto.startswith('```json'):
@@ -82,15 +48,76 @@ def generar_ruta():
         
         respuesta_json = json.loads(respuesta_texto)
 
+        if "core_topic" not in respuesta_json or "specializations" not in respuesta_json:
+            raise ValueError("La IA devolvió una estructura de datos inesperada.")
+
         return jsonify(respuesta_json)
 
     except json.JSONDecodeError:
-        print(f"Error: La IA no devolvió un JSON válido. Respuesta recibida: {response.text}")
-        return jsonify({"error": "Error al procesar la respuesta de la IA. Inténtalo de nuevo."}), 500
+        print(f"Error JSONDecode: La IA no devolvió un JSON válido. Respuesta: {response.text}")
+        return jsonify({"error": "Error al procesar la respuesta de la IA."}), 500
     except Exception as e:
         print(f"Error inesperado: {e}")
-        return jsonify({"error": f"Ocurrió un error en el servidor: {str(e)}"}), 500
+        return jsonify({"error": f"Ocurrió un error en el servidor."}), 500
 
-# --- Iniciar el servidor ---
+# --- PROMPT DE ESTRATEGIA HÍBRIDA ---
+def crear_prompt(objetivo_usuario, nivel_conocimiento):
+    return f"""
+    Eres un 'Estratega Educativo de Élite'. Tu misión es crear una ruta de aprendizaje integral, detallada y accionable en formato JSON. La calidad y utilidad de los recursos es la máxima prioridad.
+
+    Objetivo del usuario: '{objetivo_usuario}'
+    Nivel de conocimiento: '{nivel_conocimiento}'
+
+    **INSTRUCCIONES DE GENERACIÓN:**
+    1.  **Longitud y Detalle:** Genera una ruta completa con 3 a 5 fases. Cada fase debe contener entre 4 y 7 pasos detallados.
+    2.  **Descripciones Ricas:** Para cada paso, la 'descripcion' debe ser una explicación clara y útil del concepto, su importancia y qué debe aprender el usuario.
+
+    **ESTRUCTURA DE RECURSOS HÍBRIDA (OBLIGATORIA):**
+    Para cada paso, debes generar un objeto 'recursos' que contiene UN 'recurso_principal' y DOS 'alternativas'.
+
+    -   **'recurso_principal'**: Este debe ser el **MEJOR ENLACE DIRECTO POSIBLE**.
+        -   **Reglas:** Debe ser una URL real, funcional, sin muros de pago y sin necesidad de registro.
+        -   **Prioridad:** 1. Documentación Oficial. 2. Tutoriales de sitios de élite (freeCodeCamp, Real Python, MDN, etc.). 3. Un video tutorial específico y completo de YouTube.
+        -   **Formato:** Un objeto con 'titulo' (el título del recurso) y 'url' (el enlace directo).
+
+    -   **'alternativas'**: Esta debe ser una lista de DOS búsquedas de respaldo.
+        -   **Reglas:** Cada alternativa es un objeto con 'plataforma' ("YouTube" o "Google") y una 'query' de búsqueda optimizada. La query debe ser específica para encontrar contenido similar al recurso principal.
+        -   **Propósito:** Actuar como una red de seguridad si el enlace principal está roto.
+
+    **EJEMPLO DE FORMATO JSON EXACTO (NO TE DESVÍES):**
+    ```json
+    {{
+      "titulo_ruta": "Ruta de Aprendizaje Avanzada para: {objetivo_usuario} (Nivel: {nivel_conocimiento})",
+      "core_topic": {{
+        "nombre_fase": "Fase 1: Fundamentos Indispensables",
+        "pasos": [
+          {{
+            "titulo": "Entender el Event Loop en JavaScript",
+            "descripcion": "Comprender cómo JavaScript maneja operaciones asíncronas de manera no bloqueante. Es clave para entender el rendimiento de Node.js y las aplicaciones de frontend.",
+            "recursos": {{
+              "recurso_principal": {{
+                "titulo": "Video Explicativo Visual del Event Loop",
+                "url": "https://www.youtube.com/watch?v=8aGhZQkoFbQ"
+              }},
+              "alternativas": [
+                {{
+                  "plataforma": "Google",
+                  "query": "javascript event loop explained for beginners"
+                }},
+                {{
+                  "plataforma": "YouTube",
+                  "query": "visual explanation of javascript event loop"
+                }}
+              ]
+            }}
+          }}
+        ]
+      }},
+      "specializations": []
+    }}
+    ```
+    Genera el JSON completo basado en estas reglas.
+    """
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

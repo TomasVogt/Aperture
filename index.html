@@ -1,98 +1,40 @@
+<!-- Archivo: templates/index.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G.R.A. // Generador de Rutas de Aprendizaje</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Aperture // Generador de Rutas de Aprendizaje</title>
+    <!-- Esto le pide a Flask la ruta correcta para el archivo style.css en la carpeta 'static' -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <div class="container">
-        <h1>Aperture Project</h1>
-        <p>Inicia tu misión. Define tu objetivo y el nivel de tu equipo. Crearé un protocolo de aprendizaje para ti.</p>
+        <h1>Aperture project</h1>
+        <p>Define tu objetivo y tu nivel. Crearé una ruta de aprendizaje visual para ti.</p>
 
         <div class="input-group">
             <label for="userInput">Objetivo de aprendizaje:</label>
-            <input type="text" id="userInput" placeholder="Ej: desarrollo backend con Go">
+            <input type="text" id="userInput" placeholder="Ej: Python para Ciencia de Datos">
         </div>
 
         <div class="input-group">
             <label for="level">Tu nivel de conocimiento previo:</label>
             <select id="level">
-                <option value="Principiante">Principiante (Poco o nada de conocimiento)</option>
-                <option value="Intermedio">Intermedio (Conozco los fundamentos)</option>
-                <option value="Avanzado">Avanzado (Busco temas complejos y especialización)</option>
+                <option value="Principiante">Principiante</option>
+                <option value="Intermedio">Intermedio</option>
+                <option value="Avanzado">Avanzado</option>
             </select>
         </div>
 
-        <button id="generateBtn" onclick="generarRuta()">[ Generar Ruta ]</button>
+        <button id="generateBtn">[ Generar Ruta Visual ]</button>
+        
+        <div id="loader">PROCESANDO...</div>
 
-        <div id="loader">PROCESANDO TRANSMISIÓN...</div>
-        <div id="resultado"></div>
+        <div id="result-container"></div>
     </div>
 
-    <script>
-        async function generarRuta() {
-            const userInput = document.getElementById('userInput');
-            const levelSelect = document.getElementById('level');
-            const resultadoDiv = document.getElementById('resultado');
-            const loader = document.getElementById('loader');
-            const generateBtn = document.getElementById('generateBtn');
-
-            if (!userInput.value) {
-                alert("Por favor, define un objetivo para continuar la misión.");
-                return;
-            }
-
-            // --- UX Mejorada: Deshabilitar botón y mostrar loader ---
-            generateBtn.disabled = true;
-            generateBtn.innerHTML = 'Generando...';
-            loader.style.display = 'block';
-            resultadoDiv.innerHTML = '';
-
-            try {
-                // --- MODIFICACIÓN: Enviamos 'goal' y 'level' ---
-                const response = await fetch('http://127.0.0.1:5000/generate-path', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        goal: userInput.value,
-                        level: levelSelect.value 
-                    })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.error || 'Ocurrió un error desconocido en la transmisión');
-                }
-                
-                // El resto del código de renderizado es similar, pero lo adaptamos a la nueva estructura
-                let html = `<h2>${data.titulo_ruta}</h2>`;
-                data.fases.forEach(fase => {
-                    html += `<div class="fase"><h3>${fase.nombre_fase}</h3>`;
-                    fase.pasos.forEach(paso => {
-                        html += `
-                            <div class="paso">
-                                <h4>${paso.titulo}</h4>
-                                <p>${paso.descripcion}</p>
-                                <a href="${paso.recurso_util}" target="_blank" rel="noopener noreferrer">Acceder al recurso >></a>
-                            </div>
-                        `;
-                    });
-                    html += `</div>`;
-                });
-                resultadoDiv.innerHTML = html;
-
-            } catch (error) {
-                resultadoDiv.innerHTML = `<p class="error">ERROR EN LA CONEXIÓN: ${error.message}</p>`;
-            } finally {
-                // --- UX Mejorada: Habilitar botón y ocultar loader ---
-                loader.style.display = 'none';
-                generateBtn.disabled = false;
-                generateBtn.innerHTML = '[ Generar Ruta ]';
-            }
-        }
-    </script>
+    <!-- Hacemos lo mismo para el archivo JavaScript -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
