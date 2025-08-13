@@ -1,0 +1,40 @@
+<!-- Archivo: templates/index.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G.R.A. // Generador de Rutas de Aprendizaje</title>
+    <!-- Esta línea es la forma correcta de enlazar el CSS en Flask -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>G.R.A.</h1>
+        <p>Define tu objetivo y tu nivel. Crearé una ruta de aprendizaje detallada, útil y accionable para ti.</p>
+
+        <div class="input-group">
+            <label for="userInput">Quiero aprender:</label>
+            <input type="text" id="userInput" placeholder="Ej: Desarrollo Backend con Go">
+        </div>
+
+        <div class="input-group">
+            <label for="level">Mi nivel actual es:</label>
+            <select id="level">
+                <option value="Principiante">Principiante (Empezando desde cero)</option>
+                <option value="Intermedio">Intermedio (Ya conozco los fundamentos)</option>
+                <option value="Avanzado">Avanzado (Busco dominar temas complejos)</option>
+            </select>
+        </div>
+
+        <button id="generateBtn">[ Crear Mi Ruta de Aprendizaje ]</button>
+        
+        <div id="loader">Construyendo tu ruta de aprendizaje... Este proceso puede tardar un momento.</div>
+
+        <div id="result-container"></div>
+    </div>
+
+    <!-- El script se enlaza al final para un mejor rendimiento -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

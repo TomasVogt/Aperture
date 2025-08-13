@@ -1,4 +1,4 @@
-# Archivo: app.py (Versión Híbrida de Alta Calidad)
+# Archivo: app.py
 
 import os
 import json
@@ -7,9 +7,11 @@ from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from dotenv import load_dotenv
 
+# Flask buscará las carpetas 'templates' y 'static' automáticamente
 app = Flask(__name__)
 CORS(app) 
 
+# Cargar variables de entorno desde el archivo .env
 load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
 
@@ -18,10 +20,12 @@ if not api_key:
 
 genai.configure(api_key=api_key)
 
+# RUTA 1: Servir la página web principal desde la carpeta 'templates'
 @app.route('/')
 def index():
     return render_template('index.html')
 
+# RUTA 2: La API que genera la ruta de aprendizaje
 @app.route('/generate-path', methods=['POST'])
 def generar_ruta():
     try:
@@ -36,7 +40,7 @@ def generar_ruta():
             return jsonify({"error": "El objetivo y el nivel son requeridos."}), 400
 
         model = genai.GenerativeModel('gemini-1.5-flash-latest')
-        prompt_completo = crear_prompt(objetivo, nivel)
+        prompt_completo = crear_prompt_definitivo(objetivo, nivel)
         # Aumentamos el tiempo de espera, ya que la petición es más compleja
         response = model.generate_content(prompt_completo, request_options={"timeout": 120})
         
@@ -48,75 +52,75 @@ def generar_ruta():
         
         respuesta_json = json.loads(respuesta_texto)
 
-        if "core_topic" not in respuesta_json or "specializations" not in respuesta_json:
+        if "titulo_ruta" not in respuesta_json or "fases" not in respuesta_json:
             raise ValueError("La IA devolvió una estructura de datos inesperada.")
 
         return jsonify(respuesta_json)
 
     except json.JSONDecodeError:
-        print(f"Error JSONDecode: La IA no devolvió un JSON válido. Respuesta: {response.text}")
-        return jsonify({"error": "Error al procesar la respuesta de la IA."}), 500
+        print(f"Error de Decodificación JSON. La IA no devolvió un JSON válido. Respuesta recibida:\n{response.text}")
+        return jsonify({"error": "Hubo un error al procesar la respuesta de la IA. Inténtalo de nuevo."}), 500
     except Exception as e:
-        print(f"Error inesperado: {e}")
-        return jsonify({"error": f"Ocurrió un error en el servidor."}), 500
+        print(f"Error Inesperado: {e}")
+        return jsonify({"error": f"Ocurrió un error inesperado en el servidor: {str(e)}"}), 500
 
-# --- PROMPT DE ESTRATEGIA HÍBRIDA ---
-def crear_prompt(objetivo_usuario, nivel_conocimiento):
+def crear_prompt_definitivo(objetivo_usuario, nivel_conocimiento):
+    """
+    Este prompt está diseñado para ser extremadamente estricto y producir rutas largas,
+    detalladas y con recursos híbridos de alta calidad.
+    """
     return f"""
-    Eres un 'Estratega Educativo de Élite'. Tu misión es crear una ruta de aprendizaje integral, detallada y accionable en formato JSON. La calidad y utilidad de los recursos es la máxima prioridad.
+    Eres un 'Arquitecto de Currículos Digitales de Élite'. Tu única misión es construir la ruta de aprendizaje más completa, detallada y útil posible, en formato JSON. La calidad y fiabilidad de los recursos es la máxima prioridad.
 
-    Objetivo del usuario: '{objetivo_usuario}'
-    Nivel de conocimiento: '{nivel_conocimiento}'
+    Objetivo del Usuario: '{objetivo_usuario}'
+    Nivel de Conocimiento: '{nivel_conocimiento}'
 
-    **INSTRUCCIONES DE GENERACIÓN:**
-    1.  **Longitud y Detalle:** Genera una ruta completa con 3 a 5 fases. Cada fase debe contener entre 4 y 7 pasos detallados.
-    2.  **Descripciones Ricas:** Para cada paso, la 'descripcion' debe ser una explicación clara y útil del concepto, su importancia y qué debe aprender el usuario.
+    **REGLAS DE GENERACIÓN (OBLIGATORIAS):**
 
-    **ESTRUCTURA DE RECURSOS HÍBRIDA (OBLIGATORIA):**
-    Para cada paso, debes generar un objeto 'recursos' que contiene UN 'recurso_principal' y DOS 'alternativas'.
+    1.  **Profundidad y Detalle:** La ruta debe ser extensa. Genera entre 3 y 5 'fases'. Cada 'fase' debe contener entre 4 y 7 'pasos'. Las descripciones de cada paso deben ser ricas, explicando el 'qué' y el 'porqué' del concepto.
+    
+    2.  **Estructura de Recursos HÍBRIDA (La Regla Más Importante):**
+        Por cada 'paso', debes generar un objeto 'recursos' que contiene UN 'recurso_principal' Y un array de 'alternativas'.
 
-    -   **'recurso_principal'**: Este debe ser el **MEJOR ENLACE DIRECTO POSIBLE**.
-        -   **Reglas:** Debe ser una URL real, funcional, sin muros de pago y sin necesidad de registro.
-        -   **Prioridad:** 1. Documentación Oficial. 2. Tutoriales de sitios de élite (freeCodeCamp, Real Python, MDN, etc.). 3. Un video tutorial específico y completo de YouTube.
-        -   **Formato:** Un objeto con 'titulo' (el título del recurso) y 'url' (el enlace directo).
+        -   **`recurso_principal` (El Enlace de Oro):**
+            -   **Propósito:** Debe ser el MEJOR ENLACE DIRECTO, ÚTIL Y FUNCIONAL en toda la web para ese concepto.
+            -   **Prioridad Absoluta:** 1º Documentación Oficial (ej: python.org, developer.mozilla.org), 2º Tutoriales de sitios de élite (ej: freeCodeCamp, Real Python, CSS-Tricks), 3º Un video específico y completo de un canal educativo de renombre en YouTube.
+            -   **RESTRICCIONES:** NO PUEDE ser un enlace a una página de venta (Udemy, Coursera), un foro (Stack Overflow), o requerir registro. Debe ser de acceso 100% gratuito e inmediato.
+            -   **Formato:** Un objeto con `titulo` (el título real del recurso) y `url`.
 
-    -   **'alternativas'**: Esta debe ser una lista de DOS búsquedas de respaldo.
-        -   **Reglas:** Cada alternativa es un objeto con 'plataforma' ("YouTube" o "Google") y una 'query' de búsqueda optimizada. La query debe ser específica para encontrar contenido similar al recurso principal.
-        -   **Propósito:** Actuar como una red de seguridad si el enlace principal está roto.
+        -   **`alternativas` (La Red de Seguridad):**
+            -   **Propósito:** Dos búsquedas de respaldo por si el enlace principal falla.
+            -   **Formato:** Un array de DOS objetos. Cada objeto debe tener `plataforma` ("YouTube" o "Google") y una `query` de búsqueda perfectamente optimizada para encontrar contenido similar.
 
-    **EJEMPLO DE FORMATO JSON EXACTO (NO TE DESVÍES):**
+    **FORMATO JSON EXACTO (NO TE DESVÍES NI UN CARÁCTER):**
+
     ```json
     {{
-      "titulo_ruta": "Ruta de Aprendizaje Avanzada para: {objetivo_usuario} (Nivel: {nivel_conocimiento})",
-      "core_topic": {{
-        "nombre_fase": "Fase 1: Fundamentos Indispensables",
-        "pasos": [
-          {{
-            "titulo": "Entender el Event Loop en JavaScript",
-            "descripcion": "Comprender cómo JavaScript maneja operaciones asíncronas de manera no bloqueante. Es clave para entender el rendimiento de Node.js y las aplicaciones de frontend.",
-            "recursos": {{
-              "recurso_principal": {{
-                "titulo": "Video Explicativo Visual del Event Loop",
-                "url": "https://www.youtube.com/watch?v=8aGhZQkoFbQ"
-              }},
-              "alternativas": [
-                {{
-                  "plataforma": "Google",
-                  "query": "javascript event loop explained for beginners"
+      "titulo_ruta": "Ruta de Aprendizaje Definitiva para: {objetivo_usuario} (Nivel: {nivel_conocimiento})",
+      "fases": [
+        {{
+          "nombre_fase": "Fase 1: Cimientos Sólidos",
+          "pasos": [
+            {{
+              "titulo": "Entender el Modelo de Caja en CSS",
+              "descripcion": "Es el concepto más fundamental del layout en la web. Aprenderás cómo el padding, borde, margen y contenido interactúan para definir el tamaño y espaciado de un elemento.",
+              "recursos": {{
+                "recurso_principal": {{
+                  "titulo": "Guía Completa sobre el Modelo de Caja - MDN",
+                  "url": "https://developer.mozilla.org/es/docs/Learn/CSS/Building_blocks/The_box_model"
                 }},
-                {{
-                  "plataforma": "YouTube",
-                  "query": "visual explanation of javascript event loop"
-                }}
-              ]
+                "alternativas": [
+                  {{ "plataforma": "YouTube", "query": "css box model tutorial español explicación visual" }},
+                  {{ "plataforma": "Google", "query": "guía completa modelo de caja css" }}
+                ]
+              }}
             }}
-          }}
-        ]
-      }},
-      "specializations": []
+          ]
+        }}
+      ]
     }}
     ```
-    Genera el JSON completo basado en estas reglas.
+    Tu única salida debe ser el código JSON. Nada antes, nada después.
     """
 
 if __name__ == '__main__':
